@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Upload, FileText, TrendingUp,
-  ShieldCheck, Menu, X, RotateCcw, AlertTriangle,
+  ShieldCheck, Menu, X, RotateCcw, AlertTriangle, LogOut,
 } from 'lucide-react';
-import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react';
 import { ErrorBoundary }  from './components/ErrorBoundary';
-import AuthGate           from './components/AuthGate';
+import LoginScreen        from './components/LoginScreen';
 import Dashboard          from './components/Dashboard';
 import FileParser         from './components/FileParser';
 import PayslipAnalyzer    from './components/PayslipAnalyzer';
@@ -13,6 +12,7 @@ import InvestmentTracker  from './components/InvestmentTracker';
 import SystemConsole      from './components/SystemConsole';
 import useFinanceStore    from './store/financeStore';
 import { runSystemHealthCheck } from './utils/selfTest';
+import { isSessionActive, endSession } from './utils/auth';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -59,9 +59,11 @@ function ResetModal({ onConfirm, onCancel }) {
 
 // ─── App shell ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [activeTab,    setActiveTab]    = useState('dashboard');
-  const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  const [showReset,    setShowReset]    = useState(false);
+  const [loggedIn,    setLoggedIn]    = useState(isSessionActive);
+  const [username,    setUsername]    = useState('');
+  const [activeTab,   setActiveTab]   = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showReset,   setShowReset]   = useState(false);
 
   const addLog          = useFinanceStore(s => s.addLog);
   const setSystemHealth = useFinanceStore(s => s.setSystemHealth);
@@ -69,15 +71,32 @@ export default function App() {
   const resetAll        = useFinanceStore(s => s.resetAll);
 
   useEffect(() => {
-    runSystemHealthCheck(addLog, setSystemHealth);
+    if (loggedIn) {
+      runSystemHealthCheck(addLog, setSystemHealth);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loggedIn]);
+
+  // ── Not logged in — show login screen ────────────────────────────────────
+  if (!loggedIn) {
+    return (
+      <LoginScreen
+        onLogin={(user) => { setUsername(user); setLoggedIn(true); }}
+      />
+    );
+  }
 
   const handleReset = () => {
     resetAll();
     setShowReset(false);
     setActiveTab('files');
     addLog('> ♻ כל הנתונים אופסו — מוכן להזנה חדשה', 'warning');
+  };
+
+  const handleLogout = () => {
+    endSession();
+    setLoggedIn(false);
+    setUsername('');
   };
 
   const activeTabData   = TABS.find(t => t.id === activeTab) || TABS[0];
@@ -91,14 +110,6 @@ export default function App() {
   }[systemHealth.status] ?? 'bg-slate-500';
 
   return (
-    <>
-      {/* ── Signed-out: show auth gate ────────────────────────────────────── */}
-      <SignedOut>
-        <AuthGate />
-      </SignedOut>
-
-      {/* ── Signed-in: show full app ──────────────────────────────────────── */}
-      <SignedIn>
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* ── Reset modal ────────────────────────────────────────────────────── */}
       {showReset && (
@@ -142,7 +153,7 @@ export default function App() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Health indicator */}
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <span className={`w-2 h-2 rounded-full ${statusDot}`} />
@@ -154,17 +165,13 @@ export default function App() {
             </span>
           </div>
 
-          {/* User avatar (Clerk) */}
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: 'w-7 h-7',
-                userButtonPopoverCard: 'bg-slate-900 border border-slate-700',
-                userButtonPopoverActionButton: 'text-slate-200 hover:bg-slate-800',
-                userButtonPopoverActionButtonText: 'text-slate-200',
-              },
-            }}
-          />
+          {/* Username pill */}
+          {username && (
+            <span className="hidden sm:inline text-xs bg-slate-800 border border-slate-700
+                             text-slate-300 px-2.5 py-1 rounded-full">
+              {username}
+            </span>
+          )}
 
           {/* Reset button */}
           <button
@@ -177,6 +184,18 @@ export default function App() {
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">איפוס</span>
+          </button>
+
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            title="יציאה"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs
+                       text-slate-400 hover:text-slate-200 hover:bg-slate-800
+                       border border-slate-700/50 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">יציאה</span>
           </button>
 
           {/* Mobile hamburger */}
@@ -213,7 +232,7 @@ export default function App() {
                 </button>
               );
             })}
-            <div className="pt-4 border-t border-slate-800">
+            <div className="pt-4 border-t border-slate-800 space-y-1">
               <button
                 onClick={() => { setShowReset(true); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
@@ -221,6 +240,14 @@ export default function App() {
               >
                 <RotateCcw className="w-4 h-4" />
                 איפוס כל הנתונים
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                           text-slate-400 hover:bg-slate-800 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                יציאה
               </button>
             </div>
           </nav>
@@ -249,7 +276,5 @@ export default function App() {
         ניהול פיננסי — מקור אמת אחד · כל הנתונים מעובדים מקומית בדפדפן בלבד
       </footer>
     </div>
-      </SignedIn>
-    </>
   );
 }
