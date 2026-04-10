@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard, Upload, FileText, TrendingUp,
+  LayoutDashboard, Upload, FileText, TrendingUp, PiggyBank,
   ShieldCheck, Menu, X, RotateCcw, AlertTriangle, LogOut,
 } from 'lucide-react';
 import { ErrorBoundary }  from './components/ErrorBoundary';
@@ -9,6 +9,7 @@ import Dashboard          from './components/Dashboard';
 import FileParser         from './components/FileParser';
 import PayslipAnalyzer    from './components/PayslipAnalyzer';
 import InvestmentTracker  from './components/InvestmentTracker';
+import SavingsTracker     from './components/SavingsTracker';
 import SystemConsole      from './components/SystemConsole';
 import useFinanceStore    from './store/financeStore';
 import { runSystemHealthCheck } from './utils/selfTest';
@@ -16,10 +17,11 @@ import { isSessionActive, endSession } from './utils/auth';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'dashboard',   label: 'לוח בקרה',    icon: LayoutDashboard, component: Dashboard },
-  { id: 'files',       label: 'טעינת קבצים', icon: Upload,          component: FileParser },
-  { id: 'payslip',     label: 'תלוש שכר',    icon: FileText,        component: PayslipAnalyzer },
-  { id: 'investments', label: 'השקעות',       icon: TrendingUp,      component: InvestmentTracker },
+  { id: 'dashboard',   label: 'לוח בקרה',              icon: LayoutDashboard, component: Dashboard },
+  { id: 'files',       label: 'טעינת קבצים',           icon: Upload,          component: FileParser },
+  { id: 'payslip',     label: 'תלוש שכר',              icon: FileText,        component: PayslipAnalyzer },
+  { id: 'savings',     label: 'פנסיה וקרן השתלמות',    icon: PiggyBank,       component: SavingsTracker },
+  { id: 'investments', label: 'השקעות',                 icon: TrendingUp,      component: InvestmentTracker },
 ];
 
 // ─── Reset confirmation modal ─────────────────────────────────────────────────
