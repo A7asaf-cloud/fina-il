@@ -2,9 +2,10 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, CheckCircle2, XCircle, AlertTriangle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import useFinanceStore from '../store/financeStore';
 import { parseFile } from '../utils/parsers';
+import { parsePayslipPDF } from '../utils/pdfParser';
 import { formatILS, formatHebrewDate } from '../utils/formatters';
 
-const FILE_ACCEPT = '.csv,.tsv,.txt';
+const FILE_ACCEPT = '.csv,.tsv,.txt,.pdf';
 
 function FileRow({ file, onRemove }) {
   const [expanded, setExpanded] = useState(false);
@@ -68,9 +69,29 @@ export default function FileParser() {
     setParsedFiles(prev => [...prev, { id, name: file.name, status: 'parsing', typeLabel: '...', rowCount: 0, errorCount: 0, errors: [] }]);
 
     try {
-      const text = await file.text();
       addLog(`> קורא קובץ: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
+      // ── PDF path ────────────────────────────────────────────────────────────
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const payslip     = await parsePayslipPDF(arrayBuffer, addLog, file.name);
+        if (payslip && payslip.gross > 0) {
+          addPayslip(payslip);
+          setParsedFiles(prev => prev.map(f => f.id === id ? {
+            ...f, status: 'success', typeLabel: 'תלוש שכר (PDF)', rowCount: 1, errorCount: 0,
+          } : f));
+        } else {
+          setParsedFiles(prev => prev.map(f => f.id === id ? {
+            ...f, status: 'warning', typeLabel: 'תלוש שכר (PDF)',
+            errors: ['פוענח חלקית — בדוק ערכים בלשונית תלוש שכר'],
+          } : f));
+          if (payslip) addPayslip(payslip);
+        }
+        return;
+      }
+
+      // ── CSV/TXT path ────────────────────────────────────────────────────────
+      const text = await file.text();
       const { type, result } = parseFile(text, file.name, addLog);
 
       const typeLabels = {
@@ -156,10 +177,10 @@ export default function FileParser() {
           גרור קבצים לכאן או לחץ לבחירה
         </p>
         <p className="text-sm text-slate-400 mb-3">
-          קובצי CSV מ: בנק לאומי, בנק הפועלים, בנק מזרחי, ישראכרט, כאל, מקס
+          CSV מבנקים · PDF תלוש שכר (FRU, Priority, Hilan)
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          {['דף חשבון בנק', 'כרטיס אשראי', 'תלוש שכר (תלוש משפרת)'].map(t => (
+          {['דף חשבון בנק (CSV)', 'כרטיס אשראי (CSV)', 'תלוש שכר (PDF/CSV)'].map(t => (
             <span key={t} className="text-xs bg-slate-700/60 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600/40">
               {t}
             </span>
