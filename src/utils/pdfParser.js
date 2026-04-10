@@ -17,6 +17,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 // ─── Number extraction helper ─────────────────────────────────────────────────
 function toNum(s) {
   if (!s) return 0;
+  // Dates like "03/26" or "12/99" must return 0 — otherwise "03/26" → "0326" → 326
+  if (String(s).includes('/')) return 0;
   // Remove commas, spaces, ₪ and any non-numeric suffix (Hebrew chars, ?)
   const cleaned = String(s).replace(/[,\s₪]/g, '').replace(/[^\d.-]/g, '');
   return parseFloat(cleaned) || 0;
@@ -65,30 +67,36 @@ function findNear(items, label, windowSize = 6) {
 //   [amount] [date] [date] [base] [percent%] [description] [CODE]
 //   OR: [percent%] [amount] [description] [CODE]
 //
-// The code appears LAST, amounts appear BEFORE it.
-// We search backward, collect all numbers > 50 (excluding percentages < 50),
-// then return the SMALLEST candidate (contribution amount < base salary).
-function findNearCode(items, code, windowSize = 14) {
+// Rules:
+//  1. Only accept money amounts: must contain "." or "," (excludes plain integer codes)
+//  2. Stop scanning backward when another 5-digit payroll code is encountered
+//  3. Return the SMALLEST candidate (deduction < base salary)
+function findNearCode(items, code, windowSize = 10) {
+  const isPayrollCode = s => /^\d{5}$/.test(s);
+  const isMoneyLike   = s => /[,.]/.test(s); // amounts have decimal or comma
+
   for (let i = 0; i < items.length; i++) {
-    if (items[i] === code || items[i].startsWith(code + ' ') || items[i].endsWith(' ' + code)) {
+    if (items[i] === code) {
       const candidates = [];
-      // Search backward
+
+      // Search backward — stop at another payroll code boundary
       for (let j = i - 1; j >= Math.max(0, i - windowSize); j--) {
+        if (isPayrollCode(items[j]) && items[j] !== code) break; // hit next code's line
         const n = toNum(items[j]);
-        if (n > 50) candidates.push(n);
+        if (n > 50 && isMoneyLike(items[j])) candidates.push(n);
       }
+
       if (candidates.length === 0) {
-        // Search forward (some formats list code first)
+        // Forward search fallback
         for (let j = i + 1; j <= Math.min(i + windowSize, items.length - 1); j++) {
+          if (isPayrollCode(items[j]) && items[j] !== code) break;
           const n = toNum(items[j]);
-          if (n > 50) candidates.push(n);
+          if (n > 50 && isMoneyLike(items[j])) candidates.push(n);
         }
       }
+
       if (candidates.length === 1) return candidates[0];
-      if (candidates.length >= 2) {
-        // Return the SMALLEST: deduction amount < base salary
-        return Math.min(...candidates);
-      }
+      if (candidates.length >= 2) return Math.min(...candidates); // deduction < base
     }
   }
   return 0;
@@ -108,12 +116,17 @@ function findSummaryGrossNet(items) {
     const runLen = j - i;
 
     if (runLen >= 8) {
-      const run = items.slice(i, j).map(toNum);
-      const largeSalaries = run.filter(n => n > 5000 && n < 35000);
+      // Extend backward to find the true start of this numeric run
+      // (scan may have started mid-row — we want run[0] = net, which is the first number)
+      let start = i;
+      while (start > 0 && isStrictNum(items[start - 1])) start--;
+
+      const fullRun = items.slice(start, j).map(toNum);
+      const largeSalaries = fullRun.filter(n => n > 5000 && n < 35000);
 
       if (largeSalaries.length >= 2) {
         const gross = Math.max(...largeSalaries);
-        const net   = run[0]; // net is first in FRU summary row
+        const net   = fullRun[0]; // net is the FIRST number in the full summary row
 
         if (gross > 0 && net > 3000 && net < gross) {
           return { gross, net };
@@ -145,6 +158,7 @@ export async function parsePayslipPDF(arrayBuffer, addLog, fileName) {
   try {
     const items = await extractPDFText(arrayBuffer);
     addLog(`> חולצו ${items.length} שדות טקסט מה-PDF`, 'info');
+
 
     const payslip = {
       source: fileName,
