@@ -51,9 +51,9 @@ button:active{opacity:.8;transform:scale(.97)}
 
 /* ── NAV ── */
 nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:#fff;border-top:1px solid #e2e8f0;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,4px)}
-nav button{flex:1;border:none;background:transparent;padding:10px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
-.ni{font-size:24px;line-height:1}
-.nl{font-size:12px;font-weight:500;color:#94a3b8;font-family:'Heebo',sans-serif;transition:.15s}
+nav button{flex:1;border:none;background:transparent;padding:9px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.ni{font-size:22px;line-height:1}
+.nl{font-size:10px;font-weight:500;color:#94a3b8;font-family:'Heebo',sans-serif;transition:.15s}
 nav button.on .nl{color:#6366f1;font-weight:700}
 .nb{width:16px;height:2.5px;background:#6366f1;border-radius:2px;opacity:0;transition:.15s}
 nav button.on .nb{opacity:1}
@@ -204,6 +204,28 @@ nav button.on .nb{opacity:1}
 .lockbox{border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;margin-top:10px}
 .usecs{background:#1e293b;padding:10px 14px;display:flex;gap:6px;overflow-x:auto}
 .usec{padding:10px 16px;border-radius:18px;border:none;font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:.15s}
+
+/* ── STOCKS ── */
+.stk-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07);margin:0 16px 12px}
+.stk-hdr{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9}
+.stk-sym{font-size:18px;font-weight:900;color:#1e293b}
+.stk-name{font-size:12px;color:#94a3b8;margin-top:1px}
+.stk-price{text-align:left}
+.stk-cur{font-size:20px;font-weight:900;color:#1e293b;letter-spacing:-.5px}
+.stk-chg{font-size:12px;font-weight:700;margin-top:1px}
+.stk-body{padding:10px 18px 14px;display:flex;gap:0}
+.stk-stat{flex:1;padding:0 4px}
+.stk-stat-l{font-size:11px;color:#94a3b8;margin-bottom:2px}
+.stk-stat-v{font-size:14px;font-weight:700;color:#1e293b}
+.stk-acts{display:flex;gap:8px;padding:0 18px 14px}
+.stk-act{flex:1;padding:9px 6px;border-radius:10px;border:none;background:#f8fafc;font-size:12px;font-weight:700;color:#334155;font-family:'Heebo',sans-serif;cursor:pointer}
+.stk-act:active{background:#e2e8f0}
+.stk-loading{display:flex;align-items:center;justify-content:center;padding:12px;gap:8px;font-size:13px;color:#94a3b8}
+.stk-mini-spin{width:16px;height:16px;border:2px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+.add-stk{background:#fff;border-radius:16px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin:0 16px 12px;border:2px dashed #e2e8f0;cursor:pointer;text-align:center;color:#94a3b8;font-size:14px;font-weight:600}
+.add-stk:active{background:#f5f3ff;border-color:#6366f1}
+.portfolio-summary{background:linear-gradient(160deg,#1e293b,#0f172a);padding:22px 20px 26px;color:#fff}
+
 </style>
 </head>
 <body>
@@ -215,12 +237,14 @@ nav button.on .nb{opacity:1}
     <div id="p2" class="page"></div>
     <div id="p3" class="page"></div>
     <div id="p4" class="page"></div>
+    <div id="p5" class="page"></div>
     <nav>
       <button class="on" onclick="go(0)"><span class="ni">🏠</span><span class="nl">סקירה</span><div class="nb"></div></button>
       <button onclick="go(1)"><span class="ni">💰</span><span class="nl">חודשי</span><div class="nb"></div></button>
       <button onclick="go(2)"><span class="ni">💳</span><span class="nl">הוצאות</span><div class="nb"></div></button>
       <button onclick="go(3)"><span class="ni">📊</span><span class="nl">נכסים</span><div class="nb"></div></button>
       <button onclick="go(4)"><span class="ni">✏️</span><span class="nl">עדכון</span><div class="nb"></div></button>
+      <button onclick="go(5)"><span class="ni">📈</span><span class="nl">מניות</span><div class="nb"></div></button>
     </nav>
   </div>
   <button id="fab" onclick="openSheet('qa')">＋</button>
@@ -353,13 +377,16 @@ function wS(step){
 function finishSetup(){saveD();$('setup').classList.add('off');launchApp();}
 
 // ═══════════════ APP ═════════════════════════════════════════════════════════
-function launchApp(){$('main').style.display='flex';$('main').style.flexDirection='column';$('main').style.minHeight='100dvh';go(0);}
+function launchApp(){
+  if (!D.stocks) D.stocks = [];
+  $('main').style.display='flex';$('main').style.flexDirection='column';$('main').style.minHeight='100dvh';go(0);
+}
 
 function go(i){
   document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('on',j===i));
   document.querySelectorAll('nav button').forEach((b,j)=>b.classList.toggle('on',j===i));
   TAB=i;
-  if(i===0)drawHome();if(i===1)drawMonthly();if(i===2)drawExpenses();if(i===3)drawAssets();if(i===4)drawUpdate();
+  if(i===0)drawHome();if(i===1)drawMonthly();if(i===2)drawExpenses();if(i===3)drawAssets();if(i===4)drawUpdate();if(i===5)drawStocks();
 }
 
 // ═══════════════ SHEETS ══════════════════════════════════════════════════════
@@ -998,6 +1025,317 @@ function applyRes(){
   }
   scanState={type:null,b64:null,isPdf:false,fileLoaded:false,fileName:'',fileSize:'',result:null,loading:false,err:null,progress:''};
 }
+
+// ═══════════════════════════════ STOCKS ══════════════════════════════════════
+let stockCache = {};
+let stockLoading = new Set();
+
+async function fetchPrice(sym) {
+  if (stockLoading.has(sym)) return;
+  stockLoading.add(sym);
+  if (TAB === 5) drawStocks();
+
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`;
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
+    yahooUrl, // direct last
+  ];
+
+  let json = null;
+  for (const url of proxies) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) continue;
+      const text = await r.text();
+      json = JSON.parse(text);
+      if (json?.chart?.result?.[0]?.meta) break; // success
+      json = null;
+    } catch { continue; }
+  }
+
+  try {
+    const meta = json?.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('not found');
+    const price     = meta.regularMarketPrice || meta.previousClose || 0;
+    const prev      = meta.chartPreviousClose || meta.previousClose || price;
+    const change    = price - prev;
+    const changePct = prev > 0 ? (change / prev) * 100 : 0;
+    stockCache[sym] = {
+      price, change, changePct,
+      high:     meta.regularMarketDayHigh || price,
+      low:      meta.regularMarketDayLow  || price,
+      volume:   meta.regularMarketVolume  || 0,
+      name:     meta.shortName || meta.longName || sym,
+      currency: meta.currency || 'USD',
+      ts: Date.now(), err: false
+    };
+  } catch(e) {
+    stockCache[sym] = {
+      price:0, change:0, changePct:0, high:0, low:0,
+      volume:0, name:sym, currency:'', ts:Date.now(), err:true
+    };
+  }
+  stockLoading.delete(sym);
+  if (TAB === 5) drawStocks();
+}
+
+function fmtP(n, cur) {
+  if (!n && n !== 0) return '—';
+  const s = cur === 'ILS' ? '₪' : cur === 'GBP' ? '£' : cur === 'EUR' ? '€' : '$';
+  return s + (+n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtVol(n) {
+  if (!n) return '—';
+  if (n>=1e9) return (n/1e9).toFixed(1)+'B';
+  if (n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if (n>=1e3) return (n/1e3).toFixed(0)+'K';
+  return ''+n;
+}
+
+function drawStocks() {
+  if (!D.stocks) D.stocks = [];
+  const stocks = D.stocks;
+
+  // Kick off fetches for stale/missing
+  stocks.forEach(s => {
+    const c = stockCache[s.sym];
+    if (!c || (!stockLoading.has(s.sym) && Date.now() - c.ts > 90000)) fetchPrice(s.sym);
+  });
+
+  // Totals
+  let totalValue = 0, totalCost = 0;
+  stocks.forEach(s => {
+    const price = stockCache[s.sym]?.price || 0;
+    totalValue += price * (s.shares || 0);
+    totalCost  += (s.avgCost||0) * (s.shares||0);
+  });
+  const totalGain    = totalValue - totalCost;
+  const totalGainPct = totalCost > 0 ? totalGain/totalCost*100 : 0;
+
+  // Header
+  const hdr = stocks.length
+    ? `<div class="portfolio-summary">
+        <div style="font-size:13px;color:#94a3b8;margin-bottom:3px">שווי תיק</div>
+        <div style="font-size:40px;font-weight:900;letter-spacing:-2px;line-height:1;color:#fff">
+          ${totalValue > 0 ? '$'+totalValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
+        </div>
+        ${totalCost>0 ? `<div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+          <span style="font-size:15px;font-weight:800;color:${totalGain>=0?'#4ade80':'#f87171'}">${totalGain>=0?'+':''}$${Math.abs(totalGain).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} (${totalGainPct>=0?'+':''}${totalGainPct.toFixed(2)}%)</span>
+          <span style="font-size:12px;color:#475569">עלות $${totalCost.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+        </div>` : ''}
+        <div style="font-size:11px;color:#334155;margin-top:10px">Yahoo Finance · מתרענן כל 90 שניות</div>
+      </div>`
+    : `<div class="portfolio-summary">
+        <div style="font-size:14px;color:#94a3b8;margin-bottom:6px">תיק מניות</div>
+        <div style="font-size:22px;font-weight:800;color:#fff">הוסף מניות למעקב</div>
+        <div style="font-size:13px;color:#475569;margin-top:6px">מניות ישראל וארה"ב, קרנות, מדדים</div>
+      </div>`;
+
+  // Stock cards
+  const cards = stocks.map((s, idx) => {
+    const c = stockCache[s.sym];
+    const loading = stockLoading.has(s.sym) || !c;
+    const price  = c?.price || 0;
+    const change = c?.change || 0;
+    const chgPct = c?.changePct || 0;
+    const up     = change >= 0;
+    const cur    = c?.currency || 'USD';
+    const myVal  = price * (s.shares||0);
+    const myCost = (s.avgCost||0) * (s.shares||0);
+    const myGain = myCost > 0 ? myVal - myCost : null;
+    const myGPct = myCost > 0 ? (myGain/myCost)*100 : null;
+
+    return `<div class="stk-card">
+      <div class="stk-hdr">
+        <div>
+          <div class="stk-sym">${s.sym}</div>
+          <div class="stk-name">${c?.name || s.sym}</div>
+        </div>
+        <div class="stk-price">
+          ${loading
+            ? `<div class="stk-loading"><div class="stk-mini-spin"></div> טוען</div>`
+            : c?.err
+              ? `<div style="font-size:12px;color:#dc2626;line-height:1.4">❌ לא נמצא<br><span style="font-size:10px;color:#94a3b8">בדוק סימול · לחץ 🔄</span></div>`
+              : `<div class="stk-cur">${fmtP(price,cur)}</div>
+                 <div class="stk-chg" style="color:${up?'#16a34a':'#dc2626'}">${up?'▲':'▼'} ${Math.abs(change).toFixed(2)} (${chgPct>=0?'+':''}${chgPct.toFixed(2)}%)</div>`}
+        </div>
+      </div>
+      ${!loading && !c?.err ? `
+        <div class="stk-body">
+          <div class="stk-stat"><div class="stk-stat-l">שיא יום</div><div class="stk-stat-v">${fmtP(c.high,cur)}</div></div>
+          <div class="stk-stat"><div class="stk-stat-l">שפל יום</div><div class="stk-stat-v">${fmtP(c.low,cur)}</div></div>
+          <div class="stk-stat"><div class="stk-stat-l">נפח</div><div class="stk-stat-v">${fmtVol(c.volume)}</div></div>
+        </div>
+        <div style="padding:0 18px 12px">
+          <div style="background:${myGain===null?'#f8fafc':myGain>=0?'#f0fdf4':'#fff7f7'};border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:12px;color:#64748b">${s.shares} מניות${s.avgCost?` · עלות ${fmtP(s.avgCost,cur)}`:''}</div>
+              <div style="font-size:17px;font-weight:800;color:#1e293b;margin-top:2px">${fmtP(myVal,cur)}</div>
+            </div>
+            ${myGain!==null?`<div style="text-align:left">
+              <div style="font-size:15px;font-weight:900;color:${myGain>=0?'#16a34a':'#dc2626'}">${myGain>=0?'+':''}${fmtP(myGain,cur)}</div>
+              <div style="font-size:12px;font-weight:700;color:${myGain>=0?'#16a34a':'#dc2626'}">${myGPct>=0?'+':''}${myGPct.toFixed(2)}%</div>
+            </div>`:''}
+          </div>
+        </div>` : ''}
+      <div class="stk-acts" style="padding:12px 18px 16px;gap:10px">
+        <button class="stk-act" style="color:#16a34a;font-size:14px;padding:13px 8px" data-idx="${idx}" data-mode="buy" onclick="openBuySell(+this.dataset.idx,'buy')">🟢 קנה</button>
+        <button class="stk-act" style="color:#dc2626;font-size:14px;padding:13px 8px" data-idx="${idx}" data-mode="sell" onclick="openBuySell(+this.dataset.idx,'sell')">🔴 מכור</button>
+        <button class="stk-act" style="font-size:14px;padding:13px 8px" data-sym="${s.sym}" onclick="refreshStock(this.dataset.sym)">🔄 רענן</button>
+        <button class="stk-act" style="color:#94a3b8;font-size:14px;padding:13px 8px" data-idx="${idx}" onclick="removeStock(+this.dataset.idx)">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('p5').innerHTML =
+    hdr +
+    `<div style="height:12px"></div>` +
+    cards +
+    `<div class="add-stk" onclick="openAddStock()">＋ הוסף מניה / קרן / מדד</div>` +
+    `<div style="height:8px"></div>`;
+
+  clearTimeout(window._stkT);
+  window._stkT = setTimeout(() => { if (TAB===5) drawStocks(); }, 90000);
+}
+
+function refreshStock(sym) { delete stockCache[sym]; drawStocks(); }
+
+// ── Buy / Sell sheet ────────────────────────────────────────────────────────
+function openBuySell(idx, mode) {
+  const s = D.stocks[idx];
+  const c = stockCache[s.sym];
+  const isBuy = mode === 'buy';
+  $('sh-act-title').textContent = `${isBuy?'🟢 קנה':'🔴 מכור'} ${s.sym}`;
+  $('sh-act-body').innerHTML = `
+    <div style="background:#f8fafc;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:14px;color:#334155">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span>מחיר נוכחי</span>
+        <strong>${c&&!c.err&&c.price?fmtP(c.price,c.currency):'—'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>בבעלותי</span>
+        <strong>${s.shares} מניות</strong>
+      </div>
+    </div>
+    <div class="ff"><label>כמות מניות ל${isBuy?'קנייה':'מכירה'}</label>
+      <input class="fi" id="bs-qty" type="number" inputmode="decimal" placeholder="0" min="0.001" step="any"></div>
+    <div class="ff"><label>מחיר ל${isBuy?'מניה (מחיר קנייה)':'מניה (מחיר מכירה)'}</label>
+      <input class="fi" id="bs-price" type="number" inputmode="decimal" placeholder="${c&&!c.err&&c.price?c.price.toFixed(2):'0'}" step="any"></div>
+    <div id="bs-preview" style="background:#f0fdf4;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#166534;display:none"></div>
+    <button onclick="execBuySell(${idx},'${mode}')" class="fbtn" style="background:${isBuy?'linear-gradient(135deg,#16a34a,#15803d)':'linear-gradient(135deg,#ef4444,#dc2626)'}">
+      ${isBuy?'✓ אשר קנייה':'✓ אשר מכירה'}
+    </button>`;
+  // Live preview
+  ['bs-qty','bs-price'].forEach(id => {
+    $(id)?.addEventListener('input', updateBSPreview.bind(null, idx, mode));
+  });
+  actType='bs'; curSheet='act';
+  $('sbg').classList.add('on'); $('sh-act').classList.add('on');
+}
+
+function updateBSPreview(idx, mode) {
+  const s = D.stocks[idx];
+  const c = stockCache[s.sym];
+  const qty   = parseFloat($('bs-qty')?.value)   || 0;
+  const price = parseFloat($('bs-price')?.value) || 0;
+  const prev  = $('bs-preview');
+  if (!prev || qty <= 0 || price <= 0) { if(prev) prev.style.display='none'; return; }
+  const total = qty * price;
+  const cur   = c?.currency || 'USD';
+  const isBuy = mode === 'buy';
+  if (isBuy) {
+    const newShares  = (s.shares||0) + qty;
+    const newAvgCost = ((s.shares||0)*(s.avgCost||0) + qty*price) / newShares;
+    prev.innerHTML = `סה"כ: ${fmtP(total,cur)} · לאחר קנייה: ${newShares.toFixed(4)} מניות · עלות חדשה: ${fmtP(newAvgCost,cur)}`;
+  } else {
+    const remaining = (s.shares||0) - qty;
+    prev.innerHTML = remaining < 0
+      ? `<span style="color:#dc2626">⚠️ אין מספיק מניות (יש ${s.shares})</span>`
+      : `ייוותרו: ${remaining.toFixed(4)} מניות · תמורה: ${fmtP(total,cur)}`;
+  }
+  prev.style.display = 'block';
+}
+
+function execBuySell(idx, mode) {
+  const s     = D.stocks[idx];
+  const qty   = parseFloat($('bs-qty')?.value)   || 0;
+  const price = parseFloat($('bs-price')?.value) || 0;
+  if (qty <= 0)   { toast('הזן כמות'); return; }
+  if (price <= 0) { toast('הזן מחיר'); return; }
+  const isBuy = mode === 'buy';
+  if (isBuy) {
+    const newShares  = (s.shares||0) + qty;
+    const newAvgCost = ((s.shares||0)*(s.avgCost||0) + qty*price) / newShares;
+    s.shares  = +newShares.toFixed(6);
+    s.avgCost = +newAvgCost.toFixed(4);
+    toast(`✓ קנית ${qty} ${s.sym} במחיר ${price}`);
+  } else {
+    if (qty > s.shares) { toast(`אין מספיק מניות (יש ${s.shares})`); return; }
+    s.shares = +(s.shares - qty).toFixed(6);
+    if (s.shares <= 0) {
+      D.stocks.splice(idx, 1);
+      toast(`${s.sym} נמכר במלואו`);
+    } else {
+      toast(`✓ מכרת ${qty} ${s.sym} · נותרו ${s.shares}`);
+    }
+  }
+  saveD(); closeSheet(); drawStocks();
+}
+
+// ── Add new stock ────────────────────────────────────────────────────────────
+function openAddStock() {
+  $('sh-act-title').textContent = '＋ הוסף מניה / קרן / מדד';
+  $('sh-act-body').innerHTML = `
+    <div class="ff">
+      <label>סימול (Symbol)</label>
+      <input class="fi" id="ns-sym" placeholder="AAPL / NVDA / VOO / TEVA.TA"
+        style="text-transform:uppercase;letter-spacing:1px"
+        oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div style="font-size:12px;color:#94a3b8;margin:-8px 0 14px">
+      🇮🇱 ישראל: הוסף <strong>.TA</strong> (TEVA.TA, LUMI.TA, NICE.TA)<br>
+      🇺🇸 ארה"ב: AAPL, NVDA, MSFT, VOO, SPY...
+    </div>
+    <div class="ftwo">
+      <div class="ff"><label>כמות מניות</label><input class="fi" id="ns-shares" type="number" inputmode="decimal" placeholder="10" step="any"></div>
+      <div class="ff"><label>מחיר קנייה ממוצע</label><input class="fi" id="ns-cost" type="number" inputmode="decimal" placeholder="150" step="any"></div>
+    </div>
+    <button onclick="saveNewStock()" class="fbtn" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">הוסף ✓</button>`;
+  actType='add_stock'; curSheet='act';
+  $('sbg').classList.add('on'); $('sh-act').classList.add('on');
+}
+
+function saveNewStock() {
+  const sym    = txt('ns-sym').toUpperCase().replace(/\s/g,'');
+  const shares = parseFloat($('ns-shares')?.value) || 0;
+  const cost   = parseFloat($('ns-cost')?.value)   || 0;
+  if (!sym) { toast('הזן סימול'); return; }
+  if (!D.stocks) D.stocks = [];
+  const existing = D.stocks.find(s => s.sym === sym);
+  if (existing) {
+    // Add to existing position
+    const newShares  = existing.shares + shares;
+    existing.avgCost = newShares > 0
+      ? (existing.shares*existing.avgCost + shares*cost) / newShares
+      : cost;
+    existing.shares  = +newShares.toFixed(6);
+    saveD(); closeSheet(); toast(`${sym} עודכן ✓`); drawStocks(); return;
+  }
+  D.stocks.push({ sym, shares: +shares, avgCost: +cost, name: '' });
+  saveD(); closeSheet();
+  toast(`${sym} נוסף — טוען מחיר...`);
+  fetchPrice(sym);
+}
+
+function removeStock(idx) {
+  const sym = D.stocks[idx]?.sym;
+  if (!sym) return;
+  D.stocks.splice(idx, 1);
+  saveD(); toast(`${sym} הוסר`); drawStocks();
+}
+
 </script>
 </body>
 </html>
